@@ -32,16 +32,13 @@ func main() {
 	scanner.Scan()
 }
 
-func CheckPath(pathToIcon string) string {
+func CheckPath(pathToIcon string) {
 	if len(pathToIcon) < 2 {
-		log.Println("Переменная не была задана, устанавливается дефолтное значение")
-		pathToIcon, _ := os.Getwd()
-		pathToIcon += "\\z.ico"
+		log.Println("Переменная не была задана...")
 
-		return pathToIcon
+		SetIconToDisk()
 	} else {
 		log.Println("Переменная была задана")
-		return pathToIcon
 	}
 }
 
