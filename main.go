@@ -53,7 +53,7 @@ func SetIconToDisk() {
 	scanner.Scan()
 	pathToIcon := strings.TrimSpace(scanner.Text())
 
-	pathToIcon = CheckPath(pathToIcon)
+	CheckPath(pathToIcon)
 
 	k, _, err := registry.CreateKey(
 		registry.LOCAL_MACHINE,
