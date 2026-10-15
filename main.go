@@ -120,23 +120,3 @@ func InstallNewCPU() {
 
 	fmt.Println("Новый процессор установлен")
 }
-
-// func spinner(done <-chan struct{}) {
-// 	frames := []rune{'|', '/', '-', '\\'}
-// 	i := 0
-// 	for {
-// 		select {
-// 		case <-done:
-// 			fmt.Print("\r\033[K") // очистить строку
-// 			return
-// 		default:
-// 			fmt.Printf("\r%c Обработка...", frames[i%len(frames)])
-// 			i++
-// 			time.Sleep(100 * time.Millisecond)
-// 		}
-// 	}
-// }
-
-// func longTask() {
-// 	time.Sleep(3 * time.Second)
-// }
