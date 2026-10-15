@@ -1,2 +1,6 @@
+github.com/adhocore/chin v1.1.0 h1:RuBkSBhtGpW2l6y9d/YSj7ZJSQINJgjodoD0OB1coAo=
+github.com/adhocore/chin v1.1.0/go.mod h1:X6ey2uVyRozOnqd/sFb/k0pxY1tnm+Msigh1m2jlfbg=
+github.com/schollz/progressbar v1.0.0 h1:gbyFReLHDkZo8mxy/dLWMr+Mpb1MokGJ1FqCiqacjZM=
+github.com/schollz/progressbar v1.0.0/go.mod h1:/l9I7PC3L3erOuz54ghIRKUEFcosiWfLvJv+Eq26UMs=
 golang.org/x/sys v0.48.0 h1:bbX/i/6MgT9BVLM9RT1thmxL04yeTAhbEz4SyadbXoo=
 golang.org/x/sys v0.48.0/go.mod h1:hNLxWAXmnKAxqDtdwIYC4bM9oQPEecfsnNMuSxOs3og=
