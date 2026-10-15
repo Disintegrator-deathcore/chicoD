@@ -20,6 +20,7 @@ func main() {
 		"1) Установить значок диска\n",
 		"2) Удалить значок диска\n",
 		"3) Скачать процессор бесплатно\n",
+		"4) Скачать видеокарту бесплатно\n (пробовать на свой страх и риск)",
 		"0) Выйти\n",
 		": ",
 	)
@@ -33,6 +34,8 @@ func main() {
 		DeleteIconFromDisk()
 	case "3":
 		InstallNewCPU()
+	case "4":
+		InstallNewGPU()
 	case "0":
 		os.Exit(0)
 	default:
@@ -119,4 +122,114 @@ func InstallNewCPU() {
 	k.Close()
 
 	fmt.Println("Новый процессор установлен")
+}
+
+func checkInputDriver(scanner *bufio.Scanner) string {
+	if strings.TrimSpace(scanner.Text()) == "" {
+		log.Println("Значение не было введено")
+		return `{4d36e968-e325-11ce-bfc1-08002be10318}\0001`
+	} else {
+		log.Println("Значение было введено")
+		return strings.TrimSpace(scanner.Text())
+	}
+}
+
+func checkInputFriendlyName(scanner *bufio.Scanner) string {
+	if strings.TrimSpace(scanner.Text()) == "" {
+		log.Println("Значение не было введено")
+		return `Ебанутая видюха`
+	} else {
+		log.Println("Значение было введено")
+		return strings.TrimSpace(scanner.Text())
+	}
+}
+
+func InstallNewGPU() {
+	searchBase := `SYSTEM\CurrentControlSet\Enum\PCI`
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, searchBase, registry.ENUMERATE_SUB_KEYS|registry.QUERY_VALUE)
+	if err != nil {
+		log.Println(err)
+	}
+	defer k.Close()
+
+	found := false
+
+	scanner := bufio.NewScanner(os.Stdin)
+	fmt.Print("Введите ключ драйвера: ")
+	scanner.Scan()
+
+	driverCode := checkInputDriver(scanner)
+	strings.TrimSpace(scanner.Text())
+
+	fmt.Print("Введите название видеокарты, которую хотите скачать: ")
+	scanner.Scan()
+
+	friendlyName := checkInputFriendlyName(scanner)
+
+	searchKeyRecursive(k, searchBase, &found, friendlyName, driverCode)
+
+	if !found {
+		fmt.Println("Ключ, содержащий указанный код драйвера, не найден.")
+	}
+
+}
+
+// searchKeyRecursive рекурсивно обходит подключи.
+func searchKeyRecursive(key registry.Key, path string, found *bool, friendlyName string, driverCode string) {
+	// Получаем список подключей текущего ключа.
+	subKeys, err := key.ReadSubKeyNames(-1)
+	if err != nil {
+		// Некоторые ключи могут быть недоступны для чтения — просто пропускаем их.
+		return
+	}
+
+	for _, subKeyName := range subKeys {
+		// Формируем полный путь к подключу.
+		fullPath := path + "\\" + subKeyName
+
+		// Открываем подключ. Если не удаётся (например, нет прав), пропускаем.
+		subKey, err := registry.OpenKey(registry.LOCAL_MACHINE, fullPath, registry.QUERY_VALUE|registry.SET_VALUE|registry.ENUMERATE_SUB_KEYS)
+		if err != nil {
+			continue
+		}
+
+		// Проверяем, содержит ли текущий подключ (или его значения) искомый код драйвера.
+		if keyContainsDriverCode(subKey, driverCode) == true {
+			fmt.Printf("🔍 Найден ключ: %s\n", fullPath)
+
+			// Добавляем или обновляем значение FriendlyName.
+			err = subKey.SetStringValue("FriendlyName", friendlyName)
+			if err != nil {
+			} else {
+				*found = true
+			}
+		}
+
+		// Продолжаем рекурсивный обход.
+		searchKeyRecursive(subKey, fullPath, found, friendlyName, driverCode)
+		subKey.Close()
+	}
+}
+
+// keyContainsDriverCode проверяет, встречается ли driverCode в имени ключа или в его строковых значениях.
+func keyContainsDriverCode(key registry.Key, code string) bool {
+	// 1. Проверяем имя самого ключа (в реестре имена подключей часто содержат код).
+	//    Но у нас нет прямого доступа к имени ключа из registry.Key, поэтому
+	//    эту проверку делает вызывающий код (сравнение subKeyName), см. ниже.
+
+	// 2. Перебираем все строковые значения в ключе.
+	valueNames, err := key.ReadValueNames(-1)
+	if err != nil {
+		return false
+	}
+	for _, name := range valueNames {
+		val, _, err := key.GetStringValue(name)
+		if err != nil {
+			continue
+		}
+		if strings.Contains(val, code) {
+			return true
+		}
+	}
+	return false
 }
