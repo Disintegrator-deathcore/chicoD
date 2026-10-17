@@ -15,6 +15,7 @@ import (
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 
+	// Меню выбора действия
 	fmt.Print(
 		"Выберите действие: \n",
 		"1) Установить значок диска\n",
@@ -46,16 +47,17 @@ func main() {
 	scanner.Scan()
 }
 
-func CheckPath(pathToIcon string) {
+// Функция проверки пути
+func CheckPath(pathToIcon string) bool {
 	if len(pathToIcon) < 2 {
 		log.Println("Переменная не была задана...")
-
-		SetIconToDisk()
+		return false
 	} else {
-		log.Println("Переменная была задана")
+		return true
 	}
 }
 
+// Функция установки иконки диска
 func SetIconToDisk() {
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -63,38 +65,45 @@ func SetIconToDisk() {
 	scanner.Scan()
 	disk := strings.TrimSpace(scanner.Text())
 
-	fmt.Print("Введите путь для значка: ")
+	fmt.Print("Введите полный путь для значка: ")
 	scanner.Scan()
 	pathToIcon := strings.TrimSpace(scanner.Text())
 
-	CheckPath(pathToIcon)
-
-	k, _, err := registry.CreateKey(
-		registry.LOCAL_MACHINE,
-		"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons\\"+disk+"\\DefaultIcon",
-		registry.RESOURCE_REQUIREMENTS_LIST,
-	)
-	if err != nil {
-		log.Fatal(err)
+	if CheckPath(pathToIcon) {
+		k, _, err := registry.CreateKey(
+			registry.LOCAL_MACHINE,
+			"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons\\"+disk+"\\DefaultIcon",
+			registry.QUERY_VALUE|registry.SET_VALUE,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = k.SetStringValue(``, pathToIcon)
+		if err != nil {
+			log.Println(err)
+		}
+		k.Close()
 	}
-
-	k.SetStringValue(``, pathToIcon)
-	k.Close()
 }
 
+// Функция удаления иконки с диска
 func DeleteIconFromDisk() {
 	var disk string
 
 	fmt.Print("Введите букву диска: ")
 	fmt.Scan(&disk)
 
-	k := registry.DeleteKey(registry.LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons\\"+disk+"\\DefaultIcon")
-	if k != nil {
-		log.Print(k.Error())
+	err := registry.DeleteKey(registry.LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons\\"+disk+"\\DefaultIcon")
+	if err != nil {
+		log.Println(err)
 	}
-	k = registry.DeleteKey(registry.LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons\\"+disk)
+	err = registry.DeleteKey(registry.LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons\\"+disk)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
+// Функция установки нового названия процессора
 func InstallNewCPU() {
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -107,8 +116,7 @@ func InstallNewCPU() {
 		registry.ALL_ACCESS,
 	)
 	if err != nil {
-		log.Println(err)
-		k.Close()
+		log.Fatal(err)
 	}
 
 	bar := progressbar.New(100)
@@ -124,31 +132,30 @@ func InstallNewCPU() {
 	fmt.Println("Новый процессор установлен")
 }
 
+// Функция проверки ключа драйвера
 func checkInputDriver(scanner *bufio.Scanner) string {
 	if strings.TrimSpace(scanner.Text()) == "" {
-		log.Println("Значение не было введено")
 		return `{4d36e968-e325-11ce-bfc1-08002be10318}\0001`
 	} else {
-		log.Println("Значение было введено")
 		return strings.TrimSpace(scanner.Text())
 	}
 }
 
+// Функция проверки FriendlyName
 func checkInputFriendlyName(scanner *bufio.Scanner) string {
 	if strings.TrimSpace(scanner.Text()) == "" {
-		log.Println("Значение не было введено")
 		return `Ебанутая видюха`
 	} else {
-		log.Println("Значение было введено")
 		return strings.TrimSpace(scanner.Text())
 	}
 }
 
+// Функция установки названия видеокарты
 func InstallNewGPU() {
-	searchBase := `SYSTEM\CurrentControlSet\Enum\PCI`
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, searchBase, registry.ENUMERATE_SUB_KEYS|registry.QUERY_VALUE)
+	pciEnumPath := `SYSTEM\CurrentControlSet\Enum\PCI`
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, pciEnumPath, registry.ENUMERATE_SUB_KEYS|registry.QUERY_VALUE)
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
 	defer k.Close()
 
@@ -159,19 +166,17 @@ func InstallNewGPU() {
 	scanner.Scan()
 
 	driverCode := checkInputDriver(scanner)
-	strings.TrimSpace(scanner.Text())
 
 	fmt.Print("Введите название видеокарты, которую хотите скачать: ")
 	scanner.Scan()
 
 	friendlyName := checkInputFriendlyName(scanner)
 
-	searchKeyRecursive(k, searchBase, &found, friendlyName, driverCode)
+	searchKeyRecursive(k, pciEnumPath, &found, friendlyName, driverCode)
 
 	if !found {
 		fmt.Println("Ключ, содержащий указанный код драйвера, не найден.")
 	}
-
 }
 
 // searchKeyRecursive рекурсивно обходит подключи.
@@ -194,7 +199,7 @@ func searchKeyRecursive(key registry.Key, path string, found *bool, friendlyName
 		}
 
 		// Проверяем, содержит ли текущий подключ (или его значения) искомый код драйвера.
-		if keyContainsDriverCode(subKey, driverCode) == true {
+		if keyContainsDriverCode(subKey, driverCode) {
 			fmt.Printf("🔍 Найден ключ: %s\n", fullPath)
 
 			// Добавляем или обновляем значение FriendlyName.
